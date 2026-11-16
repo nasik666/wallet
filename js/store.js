@@ -147,7 +147,7 @@ export function normalize(raw) {
     debts: clean(r.debts, normDebt),
     deposits: clean(r.deposits, normDeposit),
     cats,
-    settings: { currency: str(r.settings?.currency, 4).trim() || '₽', u: num(r.settings?.u) ?? 0 },
+    settings: { currency: str(r.settings?.currency, 4).trim() === '$' ? '$' : 'сум', u: num(r.settings?.u) ?? 0 },
   };
 }
 

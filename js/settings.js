@@ -7,7 +7,7 @@ import { live, normalize, restoreStates, canonical } from './store.js';
 import { openCatForm } from './catform.js';
 import { openExport } from './stats.js';
 
-const CURRENCIES = ['₽', '$', '€', '₸', 'Br', '₴', '£'];
+const CURRENCIES = ['сум', '$'];
 const TOKEN_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=Koshelek';
 
 function syncBox() {

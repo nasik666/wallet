@@ -154,7 +154,7 @@ export function fmtNum(n) {
   return fixSpaces((Number.isInteger(a) ? nf0 : nf2).format(a));
 }
 
-export function fmtMoney(n, cur = '₽', { sign = false } = {}) {
+export function fmtMoney(n, cur = 'сум', { sign = false } = {}) {
   const v = round2(n);
   const s = v < 0 ? '−' : sign && v > 0 ? '+' : '';
   return `${s}${fmtNum(v)}${NBSP}${cur}`;
