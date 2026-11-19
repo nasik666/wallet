@@ -106,6 +106,19 @@ test('итоги, категории и ряды по дням', () => {
   assert.deepEqual(C.monthKeys('2025-11-20', '2026-02-01'), ['2025-11', '2025-12', '2026-01', '2026-02']);
 });
 
+test('значок категории: новый эмодзи заменяет прежний, составные не разрываются', () => {
+  assert.equal(C.lastGlyph('🛍️🍣'), '🍣');
+  assert.equal(C.lastGlyph('🍣👨‍👩‍👧 '), '👨‍👩‍👧');
+  assert.equal(C.lastGlyph('🇺🇿'), '🇺🇿');
+  assert.equal(C.lastGlyph('👍🏽'), '👍🏽');
+  assert.equal(C.lastGlyph('  '), '');
+  assert.ok(C.isEmoji('🍣') && C.isEmoji('🇺🇿') && C.isEmoji('❤️') && C.isEmoji('1️⃣'));
+  assert.ok(!C.isEmoji('Б') && !C.isEmoji('7'));
+  const kiss = '👩🏻‍❤️‍💋‍👨🏼';
+  const s = normalize({ cats: [{ id: 'x', type: 'exp', name: 'Свидания', emoji: kiss, order: 1 }] });
+  assert.equal(s.cats.find((c) => c.id === 'x').emoji, kiss, 'длинный эмодзи сохраняется целиком');
+});
+
 /* ───────── Долги и вклады ───────── */
 
 test('остаток долга с частичными платежами', () => {
@@ -153,11 +166,12 @@ test('normalize отбрасывает мусор и добавляет стан
   const s = normalize({
     tx: [tx({ id: 'ok' }), { id: 'bad', type: 'exp', amount: -5, date: '2026-11-16' }, { id: 'bad2', type: 'exp', amount: 5, date: 'вчера' }, null, 'x'],
     debts: 'нет',
-    settings: { currency: '€' },
+    settings: { currency: '$' },
   });
   assert.deepEqual(s.tx.map((t) => t.id), ['ok']);
   assert.deepEqual(s.debts, []);
-  assert.equal(s.settings.currency, '€');
+  assert.equal(s.settings.currency, '$');
+  assert.equal(normalize({ settings: { currency: '€' } }).settings.currency, 'сум', 'другие валюты сводятся к суму');
   assert.ok(s.cats.some((c) => c.id === 'coffee') && s.cats.some((c) => c.id === 'salary'));
 });
 

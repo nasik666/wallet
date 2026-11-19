@@ -1,33 +1,32 @@
-// Создание и правка категории.
+// Создание и правка категории: свой значок с клавиатуры iPhone или готовый из набора.
 import { store, cats } from './ctx.js';
 import { esc, openSheet, closeSheet, sheetHead, formValues, formError, confirmSheet } from './ui.js';
+import { lastGlyph, isEmoji } from './calc.js';
 import { uid } from './store.js';
 
 const EMOJI = ['🍔', '🍕', '🍺', '🍷', '🧋', '🥐', '🚇', '⛽', '🚗', '✈️', '🏋️', '🎬', '🎵', '📚', '🎓', '🐶', '💇', '🧴', '🧾', '💡', '🛠️', '💳', '🏦', '👶', '🎟️', '🏥', '🪙', '🌿', '❤️', '💰'];
-
-// Первый видимый символ строки (эмодзи бывают составными).
-function firstGlyph(s) {
-  const text = String(s ?? '').trim();
-  if (!text) return '';
-  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-    for (const part of new Intl.Segmenter('ru', { granularity: 'grapheme' }).segment(text)) return part.segment;
-  }
-  return [...text][0];
-}
 
 // Возвращает сохранённую категорию или null, если форму закрыли.
 export function openCatForm({ id = null, type = 'exp' } = {}) {
   return new Promise((resolve) => {
     const orig = id ? store.state.cats.find((c) => c.id === id) : null;
     const kind = orig?.type ?? type;
+    let chosen = orig?.emoji ?? (kind === 'exp' ? '🛍️' : '💰');
+    const own = orig && !EMOJI.includes(chosen) ? chosen : '';
+
     const sheet = openSheet(
       `${sheetHead(orig ? 'Категория' : kind === 'exp' ? 'Новая категория расходов' : 'Новая категория доходов')}
       <form novalidate>
         <div class="cat-form">
-          <input class="input emoji-input" name="emoji" value="${esc(orig?.emoji ?? (kind === 'exp' ? '🛍️' : '💰'))}" maxlength="12" aria-label="Значок" autocomplete="off">
+          <button type="button" class="emoji-preview" data-own aria-label="Выбрать свой значок"></button>
           <input class="input" name="name" placeholder="Название" maxlength="24" value="${esc(orig?.name ?? '')}" autocomplete="off" autocapitalize="sentences" enterkeyhint="done">
         </div>
-        <div class="emoji-grid">${EMOJI.map((e) => `<button type="button" class="emoji" data-emoji="${e}">${e}</button>`).join('')}</div>
+        <label class="emoji-own">
+          <span class="emoji-own-ico" aria-hidden="true">😀</span>
+          <input class="input" name="own" value="${esc(own)}" placeholder="Свой значок — нажмите и выберите" aria-label="Свой значок" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+        </label>
+        <p class="hint small">Подойдёт любой эмодзи iPhone: на клавиатуре нажмите 😀 или 🌐, найдите нужный через поиск. Или выберите из готовых:</p>
+        <div class="emoji-grid">${EMOJI.map((e) => `<button type="button" class="emoji" data-emoji="${e}" aria-label="Значок ${e}">${e}</button>`).join('')}</div>
         <p class="form-error" hidden></p>
         <button class="btn primary" type="submit">Сохранить</button>
         ${orig ? '<button type="button" class="btn danger" data-del>Удалить категорию</button>' : ''}
@@ -35,11 +34,41 @@ export function openCatForm({ id = null, type = 'exp' } = {}) {
       { onClose: (r) => resolve(r ?? null) },
     );
     const form = sheet.inner.querySelector('form');
+    const preview = form.querySelector('.emoji-preview');
+    const ownInput = form.elements.own;
+
+    const paint = () => {
+      preview.textContent = chosen;
+      for (const b of form.querySelectorAll('[data-emoji]')) b.classList.toggle('on', b.dataset.emoji === chosen);
+    };
+    paint();
+
+    // Новый эмодзи с клавиатуры заменяет прежний: в поле всегда остаётся один значок.
+    ownInput.addEventListener('input', () => {
+      const g = lastGlyph(ownInput.value);
+      if (!g) return;
+      if (ownInput.value !== g) ownInput.value = g;
+      chosen = g;
+      paint();
+      if (isEmoji(g)) ownInput.blur(); // эмодзи выбран — прячем клавиатуру, значок виден сверху
+    });
+    ownInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        ownInput.blur();
+      }
+    });
 
     form.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-own]')) {
+        ownInput.focus();
+        return;
+      }
       const pick = e.target.closest('[data-emoji]');
       if (pick) {
-        form.elements.emoji.value = pick.dataset.emoji;
+        chosen = pick.dataset.emoji;
+        ownInput.value = '';
+        paint();
         return;
       }
       if (e.target.closest('[data-del]')) {
@@ -52,12 +81,10 @@ export function openCatForm({ id = null, type = 'exp' } = {}) {
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const v = formValues(form);
-      const name = v.name.trim();
+      const name = formValues(form).name.trim();
       if (!name) return formError(form, 'Введите название');
-      const emoji = firstGlyph(v.emoji) || '🏷️';
       const order = orig?.order ?? Math.max(-1, ...cats.of(kind).map((c) => c.order)) + 1;
-      const saved = store.put('cats', { id: orig?.id ?? uid(), type: kind, name, emoji, order });
+      const saved = store.put('cats', { id: orig?.id ?? uid(), type: kind, name, emoji: chosen || '🏷️', order });
       closeSheet(sheet, saved);
     });
   });

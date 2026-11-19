@@ -118,7 +118,7 @@ function normCat(r) {
     ...b,
     type: r.type,
     name: str(r.name, 40) || 'Категория',
-    emoji: str(r.emoji, 16) || '🏷️',
+    emoji: str(r.emoji, 32) || '🏷️',
     order: num(r.order) ?? 999,
     ...(r.del ? { del: 1 } : {}),
   };

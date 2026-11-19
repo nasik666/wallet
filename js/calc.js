@@ -274,3 +274,19 @@ export function depositAt(dep, on = today()) {
     value: round2(balance + pending),
   };
 }
+
+/* ───────── Значки категорий ───────── */
+
+const graphemes = (s) => {
+  const text = String(s ?? '');
+  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+    return [...new Intl.Segmenter('ru', { granularity: 'grapheme' }).segment(text)].map((p) => p.segment);
+  }
+  return [...text];
+};
+
+// Последний введённый символ: эмодзи бывают составными (флаги, семьи, оттенки кожи),
+// а новый значок с клавиатуры встаёт после прежнего и должен его заменить.
+export const lastGlyph = (s) => graphemes(s).filter((g) => g.trim()).at(-1) ?? '';
+
+export const isEmoji = (g) => /\p{Extended_Pictographic}|\p{Regional_Indicator}|[⃣️]/u.test(g);
